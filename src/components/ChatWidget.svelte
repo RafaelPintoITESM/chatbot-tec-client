@@ -33,7 +33,7 @@
       const body = {
         text: questMessage
       };
-      const response = await fetch('http://localhost:3000/chatbot/quest',
+      const response = await fetch('https://chatbot-tec-server.azurewebsites.net/chatbot/quest',
         {
           method: 'POST',
           headers: {
