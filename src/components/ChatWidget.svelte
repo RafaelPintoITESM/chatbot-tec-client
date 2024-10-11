@@ -1,24 +1,54 @@
 <!-- ChatWidget.svelte -->
 <script lang="ts">
+    import { afterUpdate } from "svelte";
   
     let mostrarChat = false;
-  
+    let newMessage = "";
+    let answering = false;
+    let chatContainer:any;
+    let messages = [
+        { mine:false , text: "Bienvenido!, soy TEC-Chatbot , en que te puedo ayudar?"},
+    ]
+
     function toggleChat() {
       mostrarChat = !mostrarChat;
     }
-
-    let messages = [
-        { mine:false , text: "Bienvenido, soy chatbot"},
-    ]
-
-    let sendMessage = ()=>{
-        const entryMessage = { mine: true , text: newMessage};
+    let sendMessage = async ()=>{
+        const entryMessage = newMessage;
+        newMessage = "";
+        setMessage(entryMessage,true);
+        answering = true;
+        const responseMessage = await questChatbot(entryMessage); 
+        const formtMessage = formatearTexto(responseMessage);
+        setMessage(formtMessage,false);    
+        answering = false;   
+    }
+    let setMessage = (message:string, isMine:boolean)=>{
+        const entryMessage = { mine: isMine , text: message};
         messages.push(entryMessage);
         messages = messages;
-        newMessage = "";
     }
 
-    let newMessage = "";
+    const questChatbot = async (questMessage:string)=>{
+      const body = {
+        text: questMessage
+      };
+      const response = await fetch('http://localhost:3000/chatbot/quest',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+        return (await response.json()).response;
+    }
+    function formatearTexto(text:string) {
+      return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    }
+    afterUpdate(() => {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
   </script>
   
   <style>
@@ -37,18 +67,19 @@
     }
   
     .chat-window {
-  position: fixed;
-  bottom: 100px;
-  right: 20px;
-  width: 500px;
-  max-height: 400px;
-  background-color: white;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    width: 500px;
+    max-height: 400px;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+  }
 
 /* Media query para pantallas de menos de 768px (dispositivos móviles) */
 @media (max-width: 768px) {
@@ -70,6 +101,7 @@
         display: flex;
         flex-direction: column;
         padding: 1rem;
+        overflow: auto;
     }
   
     .chat-input {
@@ -119,20 +151,25 @@
       <div class="chat-header">
         <h3>Chat de Soporte</h3>
       </div>
-      <div class="chat-messages">
+      <div class="chat-messages" bind:this={chatContainer}>
         <!-- Aquí irían los mensajes del chat -->
         <p>Bienvenido al chat de soporte.</p>
         {#each messages as message}
             <div class="mensaje {message.mine ? 'mio' : 'otro'}">
-                <p>{message.text}</p>
+                <p>{@html message.text}</p>
             </div>
 
         {/each}
+        {#if answering}
+          <div class="mensaje otro">
+            <p>Escribiendo...</p>
+        </div>
+        {/if}
       </div>
       <form on:submit|preventDefault={sendMessage}>
         <div class="chat-input">
                 <input type="text" placeholder="Escribe un mensaje..."  bind:value={newMessage} />
-                <button type="submit">Enviar</button>
+                <button type="submit" disabled={answering}>Enviar</button>
         </div>
       </form>
     </div>
